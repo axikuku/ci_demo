@@ -1,0 +1,37 @@
+name: Rust
+
+on:
+  push:
+    tags: [v*]
+
+  workflow_dispatch:
+
+jobs:
+  build:
+    if: startsWith(github.ref, 'refs/heads/main')
+
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        BUILD_TARGET: [release] # refers to a cargo profile
+    outputs:
+      release_built: ${{ steps.set-output.outputs.release_built }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Cache Cargo registry and git
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+      - name: Build binaries in "${{ matrix.BUILD_TARGET }}" mode
+        run: cargo build --profile ${{ matrix.BUILD_TARGET }}
+      - name: Run tests in "${{ matrix.BUILD_TARGET }}" mode
+        run: cargo test --profile ${{ matrix.BUILD_TARGET }}
+      - name: Upload release artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: doit
+          path: target/${{ matrix.BUILD_TARGET }}/*.exe
